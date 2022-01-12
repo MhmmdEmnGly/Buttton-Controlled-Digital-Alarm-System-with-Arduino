@@ -1,0 +1,342 @@
+/*
+        Dijital Alarm Sistemi - Digital Alarm System
+        
+        Bu Projeye 01.11.2021 Tarihinde baslanmıstır.
+        Oled Kütüphanesi hazır alınmıstır,
+        Kalan tüm kodlar MEG tarafından yazılmıstır
+
+        This project's starting date 01.11.2021
+        Only Oled display library get ready
+        Rest all codes belong to MEG
+        
+        Proje sahibi ve Kodu yazan     : Muhammet Emin Gülay
+        Project owner and code writer  : Muhammet Emin Gülay 
+        ---------------------------------------------------
+
+*/
+int dakika_onlar =0;
+int dakika_birler =0;
+int saat_onlar =0;
+int saat_birler =0;
+
+int toplamDakika=0;
+int toplamSaniye =0;
+
+// SDA D2
+// SCL D1
+
+#define buzzer 10
+#define seritled 9 
+
+
+#include <SPI.h>
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>                         //   ARDUİNOYA GECERSEN RESET KISMINI 4 YAPPPPP
+
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+// The pins for I2C are defined by the Wire-library. 
+// On an arduino UNO:       A4(SDA), A5(SCL)
+// On an arduino MEGA 2560: 20(SDA), 21(SCL)
+// On an arduino LEONARDO:   2(SDA),  3(SCL), ...
+#define OLED_RESET     4 // Reset pin # (or -1 if sharing Arduino reset pin)    ------ ESP 8266 NODEMCU KULLANILACAKSA BURASI -1 OLMALI  
+#define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32  -----   BURAYI DEGİSTİRDİM NORMALDE 0x3D İDİ BENİMKİ 0x3C
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+
+#define NUMFLAKES     10 // Number of snowflakes in the animation example
+
+#define LOGO_HEIGHT   16
+#define LOGO_WIDTH    16
+static const unsigned char PROGMEM logo_bmp[] =
+{ 0b00000000, 0b11000000,
+  0b00000001, 0b11000000,
+  0b00000001, 0b11000000,
+  0b00000011, 0b11100000,
+  0b11110011, 0b11100000,
+  0b11111110, 0b11111000,
+  0b01111110, 0b11111111,
+  0b00110011, 0b10011111,
+  0b00011111, 0b11111100,
+  0b00001101, 0b01110000,
+  0b00011011, 0b10100000,
+  0b00111111, 0b11100000,
+  0b00111111, 0b11110000,
+  0b01111100, 0b11110000,
+  0b01110000, 0b01110000,
+  0b00000000, 0b00110000 };
+
+void setup() {
+  
+  
+  Serial.begin(115200);  // 115200 baudrate te çalışıyoum
+
+  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
+  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+
+
+  pinMode(3,INPUT); //      dakika birler basamagı
+  pinMode(4,INPUT); //      dakika onlar basamagı  
+  pinMode(5,INPUT); //     saat birler basamagı
+  pinMode(6,INPUT); //     saat onlar basamagı
+
+  pinMode(7,INPUT); //    OK Butonu
+
+
+  
+  pinMode(8,OUTPUT); //D5    butonların calistigini gosteren -butona basınca yannan led -
+
+  pinMode(10,OUTPUT); //SD3  Buzzer pini
+  pinMode(9,OUTPUT); //SD2   12V luk Şerit Led Rölesi
+ 
+
+
+  display.clearDisplay();
+  display.display();
+  
+}
+void loop() {
+  // put your main code here, to run repeatedly:
+  
+    
+    // dakika birler basamagı
+  if(digitalRead(3)== HIGH){       
+
+      if(dakika_birler >= 9){
+        dakika_birler=-1;
+      }
+      digitalWrite(8,HIGH);
+      Serial.println("pressed button");
+      Serial.println("Minute increased 1 ");
+      dakika_bir_art();
+      
+  }
+    // Dakika onlar basamagı
+     else if(digitalRead(4)==HIGH){        
+
+      if(dakika_onlar >= 5){
+        dakika_onlar=-1;
+      }
+        
+      digitalWrite(8,HIGH);              
+      Serial.println("pressed button");
+      Serial.println("Minutes increased 10 ");
+      dakika_on_art();
+  }
+
+  else if(digitalRead(5)== HIGH){                // saat birler
+
+      if(saat_birler >= 9){
+        saat_birler=-1;
+      }
+      digitalWrite(8,HIGH);
+      Serial.println("pressed button");
+      Serial.println("Minute increased 1 ");
+      saat_bir_art();
+
+  }
+        //saat onlar basamagı
+  else if(digitalRead(6)== HIGH){              
+
+      if(saat_onlar >= 9){
+        saat_onlar=-1;
+      }
+      digitalWrite(8,HIGH);
+      Serial.println("pressed button");
+      Serial.println("Minute increased 1 ");
+      saat_on_art();
+
+  }
+
+  else if (digitalRead(7) == HIGH){          // D6  ---- OK Butonu
+    
+    sureHesapla_goster();
+    
+    
+  }
+
+
+  else {
+    default_mytime();
+    digitalWrite(8,LOW);
+  }
+  
+}
+
+void dakika_bir_art(){
+  
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(10,10);
+  display.print("1 Minute increased ");
+  display.display();
+  dakika_birler+=1;
+  delay(500);
+  
+}
+
+void dakika_on_art(){
+  
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(5,10);
+  display.print("10 Minutes increased ");
+  display.display();
+  dakika_onlar +=1;
+  delay(500);
+  
+  
+}
+
+void saat_bir_art(){
+  
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(10,10);
+  display.print("1 Hour increased ");
+  display.display();
+  saat_birler+=1;
+  delay(500);
+  
+}
+
+
+void saat_on_art(){
+  
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(10,10);
+  display.print("10 Hour increased ");
+  display.display();
+  saat_onlar+=1;
+  delay(500);
+  
+}
+
+
+
+void default_mytime(){
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+  display.setCursor(20,10);
+  display.print("Alarm will Ring :  ");
+  
+  display.setCursor(40,40);
+  display.print(saat_onlar);
+  display.setCursor(45,40);
+  display.print(saat_birler);
+
+  display.setCursor(50,40);
+  display.print(":");
+
+  display.setCursor(55,40);
+  display.print(dakika_onlar);
+  display.setCursor(60,40);
+  display.print(dakika_birler);
+  
+  display.display();
+  
+}
+
+void sureHesapla_goster(){
+  digitalWrite(8,HIGH);
+  toplamDakika = dakika_birler + (dakika_onlar*10) + (saat_birler*60) + (saat_onlar *60*10);
+  toplamSaniye = toplamDakika * 60;
+  Serial.print("\nZamanlayicinin sayacagi dakika : ");
+  Serial.println(toplamDakika);
+  Serial.print("Sayilacak Saniye : ");
+  Serial.println(toplamSaniye);
+  delay(400);
+  digitalWrite(8,LOW);
+
+    int ekran_saat_onlar    =  0;
+    int ekran_saat_birler   =  0;
+    int ekran_dakika_onlar  =  0;
+    int ekran_dakika_birler =  0;
+    int toplam_saat=0;
+    
+    
+
+    
+    
+
+
+  int sayac =0;
+                                                      
+                                                      //  !!! --------  SURE BITINCE BUZZERI OTTUR ---------!!!!
+                                                      //  !!!--------- SURE BITINCE SERIT LED YANSIN -------!!!!
+    while(sayac < toplamSaniye){
+
+    int kalanSaniye =toplamSaniye - sayac; 
+
+    //toplam_saat = toplamDakika / 60;
+    ekran_saat_onlar    = ((kalanSaniye /60) /60)/10 ;                 //toplam_saat /10;
+    ekran_saat_birler   = ((kalanSaniye /60) /60)%10;                  //toplam_saat %10;
+    ekran_dakika_onlar  = ((kalanSaniye /60) %60)/10;                       //(toplamDakika %60) /10;
+    ekran_dakika_birler = ((kalanSaniye /60) %60) %10 ;                //(toplamDakika %60) %10;
+
+      if(digitalRead(7) == HIGH){
+        delay(2000);
+        toplamSaniye=0;
+        // Butona 2.kez basılırsa zamanlayıcı iptal olur   ***  2 saniye butona basılı tutulması lazım
+        break;
+      }
+
+    
+    display.clearDisplay();
+    display.setCursor(10,10);
+    display.print(" Kalan Sure : ");
+    display.setCursor(30,30);
+    display.print(ekran_saat_onlar); display.print(" ");     
+    display.print(ekran_saat_birler); display.print("  : ");   
+    
+    
+    display.print(ekran_dakika_onlar); display.print(" "); 
+    display.print(ekran_dakika_birler); display.print("  ");
+
+    display.setCursor(5,50);
+    display.print("Kalan Saniye: ");
+    display.print(kalanSaniye);
+    Serial.print("Gecen Sure");     
+    Serial.println(sayac);
+    display.display();
+    sayac++;
+    
+    
+    Serial.println("Kalan Saniye ");
+    Serial.println(kalanSaniye);
+    delay(1000);
+    
+
+    if(kalanSaniye ==1){        // SURE bittigi zaman buzzer oter ve role aktif hale gelip serit led yanmaya baslar  -- 
+      digitalWrite(10,HIGH);
+      digitalWrite(seritled,HIGH);
+      Serial.println("Zil Caliyor");
+      for(int i =0;i<30;i++){
+        delay(1000);
+          if(digitalRead(7)==HIGH){
+          Serial.println(i);
+          delay(500);
+          break;
+            }
+      //delay(30000);
+         }
+    }
+  digitalWrite(10,LOW);
+    
+      
+  
+  display.display();
+  
+}
+}
